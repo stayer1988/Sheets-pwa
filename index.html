@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Листы и рисунки</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#1769aa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Листы">
+
+<style>
+:root{font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:#202124;background:#f3f5f8}
+*{box-sizing:border-box}
+body{margin:0}
+button,select,input{font:inherit}
+button,select,input[type=number],input[type=color]{min-height:38px;border:1px solid #c7ccd3;border-radius:7px;background:#fff;padding:6px 10px;color:inherit}
+button{cursor:pointer}
+button:hover{background:#eef3fa}
+button.primary{background:#1769aa;color:white;border-color:#1769aa}
+button.active{background:#dcecff;border-color:#5489bd}
+header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #d8dce2;padding:10px 14px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;box-shadow:0 2px 8px #0000000b}
+header strong{font-size:17px;margin-right:8px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.separator{height:28px;border-left:1px solid #d8dce2;margin:0 2px}
+#sheets{padding:18px 12px 80px;display:flex;flex-direction:column;align-items:center;gap:24px}
+.sheet-card{width:min(100%,1000px);background:#fff;padding:12px;border:1px solid #d9dde3;border-radius:10px;box-shadow:0 3px 14px #17202c12}
+.sheet-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.sheet-head .sheet-name{font-weight:650;margin-right:auto}
+.sheet-head select{max-width:150px}
+.sheet-head input[type=number]{width:88px}
+.stage{position:relative;width:100%;background:#fff;border:1px solid #aeb4bd;overflow:hidden}
+.stage canvas{display:block;width:100%;height:auto;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hint{font-size:12px;color:#606975;padding:8px 2px 0}
+.props{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #e4e7eb}
+.props label,.sheet-head label{display:flex;align-items:center;gap:5px;font-size:13px;color:#505660}
+.props input[type=number]{width:90px}
+.props input[type=text]{width:180px}
+.props input[type=color]{width:46px;padding:3px}
+.props .spacer{flex:1}
+.muted{font-size:12px;color:#68717c}
+.color-control{position:relative}
+#drawColorToggle{display:inline-flex;align-items:center;gap:7px}
+#drawColorSwatch{width:18px;height:18px;border:1px solid #737983;border-radius:50%;background:#222}
+#colorPicker{position:absolute;top:calc(100% + 8px);left:0;z-index:10;width:220px;padding:12px;background:#fff;border:1px solid #c7ccd3;border-radius:10px;box-shadow:0 6px 20px #0002}
+#colorPicker[hidden]{display:none}
+#colorPicker strong{display:block;margin:0 0 8px;font-size:14px}
+#colorWheel{width:184px;height:184px;display:block;margin:0 auto;touch-action:none;cursor:crosshair}
+.color-brightness{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
+.color-brightness input{width:100%;accent-color:#555}
+.color-preview{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:13px}
+#colorPreviewSwatch{width:22px;height:22px;border:1px solid #aaa;border-radius:50%}
+.grid-toggle{display:inline-flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap}
+.grid-toggle input,.props .lockAspect{width:18px;height:18px;accent-color:#1769aa}
+#fileInput,#projectInput{display:none}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:8px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+#moreToolsToggle{display:none}
+#moreTools{display:contents}
+@media(max-width:650px){
+ header{padding:6px 8px;gap:0}
+ header strong{display:none}
+ .toolbar{display:flex;flex-direction:column;gap:6px;width:100%;padding:0}
+ .primary-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%}
+ #moreTools{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:100%;padding-top:2px}
+ header.tools-expanded #moreTools{display:grid}
+ #moreToolsToggle{display:block;width:100%;min-height:36px;padding:2px;font-size:18px;line-height:1}
+ #moreToolsToggle .arrow{display:inline-block;transition:transform .2s}
+ header.tools-expanded #moreToolsToggle .arrow{transform:rotate(180deg)}
+ .toolbar>*{min-width:0;width:100%;margin:0}
+ .primary-tools>*{min-width:0;width:100%;margin:0}
+ #moreTools>*{min-width:0;width:100%;margin:0}
+ .toolbar button{padding:4px;white-space:normal;line-height:1.15}
+ #moreTools .separator{display:none}
+ .grid-toggle{justify-content:center;white-space:normal;text-align:center;line-height:1.1;padding:2px}
+ button,select,input[type=number],input[type=color]{min-height:44px;font-size:16px}
+ input[type=text]{font-size:16px;min-height:44px}
+ .color-control{position:static}
+ #colorPicker{position:fixed;left:50%;top:64px;transform:translateX(-50%);width:min(260px,90vw)}
+ #colorWheel{width:min(220px,70vw);height:auto;aspect-ratio:1}
+ #sheets{padding:8px 6px 40px;gap:14px}
+ .sheet-card{padding:8px;border-radius:8px}
+ .sheet-head{gap:6px;margin-bottom:8px}
+ .sheet-head .sheet-name{width:100%}
+ .sheet-head label{flex:1 1 130px;justify-content:space-between}
+ .sheet-head select{flex:1;min-width:0}
+ .sheet-head button{flex:1 1 auto}
+ .hint{display:none}
+ .props{position:relative;bottom:auto;z-index:4;background:#fffffff2;gap:7px;margin:8px -8px -8px;padding:8px;border-top:1px solid #cfd4da;border-radius:0 0 8px 8px;overflow:visible;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+ .props>*{min-width:0;width:100%;flex:none}
+ .props .spacer{display:none}
+ .props label{display:flex;flex-direction:column;align-items:stretch;gap:3px;font-size:12px;min-width:0}
+ .props input[type=number]{width:100%;min-width:0}
+ .props input[type=text]{width:100%;min-width:0}
+ .props input[type=color]{width:100%;max-width:100%;padding:3px}
+ .props label:has(.lockAspect){grid-column:1 / -1;flex-direction:row;align-items:center;gap:6px;font-size:13px}
+ .props .lockAspect,.grid-toggle input{width:24px;height:24px}
+ .props button{white-space:normal;line-height:1.15}
+ .props .muted{grid-column:1 / -1}
+ @media(max-width:360px){.props{grid-template-columns:minmax(0,1fr)}}
+}
+@media print{
+ @page{margin:0}
+ body{background:#fff}
+ header,.sheet-head,.props,.hint{display:none!important}
+ #sheets{display:block;padding:0}
+ .sheet-card{width:auto;padding:0;border:0;border-radius:0;box-shadow:none;break-after:page;page-break-after:always}
+ .sheet-card:last-child{break-after:auto;page-break-after:auto}
+ .stage{width:var(--print-width);height:var(--print-height);border:0;overflow:hidden}
+ .stage canvas{width:100%;height:100%}
+}
+</style>
+</head>
+<body>
+<header>
+ <strong>Листы и рисунки</strong>
+ <div class="toolbar">
+    <div class="primary-tools">
+     <button id="addImage">Добавить</button>
+     <button id="drawTool">Рисовать</button>
+     <button id="print">Печать</button>
+     <button id="moreToolsToggle" type="button" aria-expanded="false" aria-controls="moreTools" aria-label="Показать остальные команды"><span class="arrow">▼</span></button>
+    </div>
+    <div id="moreTools">
+     <button id="addSheet" class="primary">＋ Лист</button>
+     <button id="addText">Текст</button>
+     <div class="color-control"><button id="drawColorToggle" type="button"><span id="drawColorSwatch"></span>Цвет</button><div id="colorPicker" hidden><strong>Цвет рисования</strong><canvas id="colorWheel" width="184" height="184" aria-label="Цветовое колесо"></canvas><label class="color-brightness">Яркость <input id="colorBrightness" type="range" min="0" max="100" value="50"></label><div class="color-preview"><span id="colorPreviewSwatch"></span><span id="colorHex">#800000</span></div></div></div>
+     <label class="grid-toggle"><input id="gridSnap" type="checkbox"> Сетка 1 мм</label>
+     <button id="cropTool">Обрезать</button>
+     <button id="matrix">Матрица</button>
+     <button id="deleteItem">Удалить</button>
+     <span class="separator"></span>
+     <button id="saveProject">Сохранить проект</button>
+     <button id="loadProject">Открыть проект</button>
+    </div>
+   </div>
+  </header>
+<input id="fileInput" type="file" accept="image/*" multiple>
+<input id="projectInput" type="file" accept="application/json,.json">
+<main id="sheets"></main>
+<div id="toast" role="status"></div>
+<script>
+(() => {
+ "use strict";
+ const formats = {
+  A0:[841,1189],A1:[594,841],A2:[420,594],A3:[297,420],A4:[210,297],A5:[148,210],A6:[105,148],
+  B0:[1000,1414],B1:[707,1000],B2:[500,707],B3:[353,500],B4:[250,353],B5:[176,250],
+  Letter:[215.9,279.4],Legal:[215.9,355.6],Tabloid:[279.4,431.8],Custom:[210,297]
+ };
+ const $ = s => document.querySelector(s);
+ const sheetsEl = $("#sheets");
+ let project = {version:1,sheets:[]}, activeTool = "select", selected = null, activeSheetId = null, cache = new Map(), drawing = null, cropRect = null, snapToGrid = false, activePointers = new Map();
+ let drawColor="#800000",colorHue=0,colorSaturation=1,colorLightness=0.5;
+ const fmt = n => Math.round(Number(n)*10)/10;
+ const toast = message => {
+  const el=$("#toast"); el.textContent=message; el.classList.add("show");
+  clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove("show"),2400);
+ };
+ const newId=()=>globalThis.crypto?.randomUUID?crypto.randomUUID():`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+ const makeSheet = (format="A4",width,height) => ({
+  id:newId(),format,width:width||formats[format][0],height:height||formats[format][1],orientation:"portrait",items:[]
+ });
+ project.sheets.push(makeSheet());
+ activeSheetId=project.sheets[0].id;
+ function dims(sheet){return sheet.orientation==="landscape"?[sheet.height,sheet.width]:[sheet.width,sheet.height]}
+ function imageFor(src){
+  if(cache.has(src)) return cache.get(src);
+  const image=new Image();image.onload=()=>project.sheets.forEach(redraw);image.onerror=()=>toast("Не удалось загрузить изображение из проекта");image.src=src;cache.set(src,image);return image;
+ }
+ function drawItem(ctx,item){
+  const cx=item.x+item.w/2,cy=item.y+item.h/2;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate((item.rotation||0)*Math.PI/180);
+  if(item.type==="image"){
+   const im=imageFor(item.src);
+   if(im.complete&&im.naturalWidth){
+    const c=item.crop||{x:0,y:0,w:1,h:1};
+     ctx.scale(item.flipX?-1:1,item.flipY?-1:1);ctx.filter=item.invertColors?"invert(1)":"none";
+     ctx.drawImage(im,c.x*im.naturalWidth,c.y*im.naturalHeight,c.w*im.naturalWidth,c.h*im.naturalHeight,-item.w/2,-item.h/2,item.w,item.h);
+    }
+   } else if(item.type==="text"){
+    const baseW=item.baseW||item.w,baseH=item.baseH||item.h;
+    ctx.scale(item.flipX?-1:1,item.flipY?-1:1);
+    ctx.scale(item.w/baseW,item.h/baseH);
+   ctx.fillStyle=item.color||"#111";ctx.textBaseline="top";ctx.font=`${item.fontSize||12}mm ${item.fontFamily||"sans-serif"}`;
+   const lines=(item.text||"Текст").split("\n"),lineHeight=(item.fontSize||12)*1.25;
+   lines.forEach((line,i)=>ctx.fillText(line,-baseW/2,-baseH/2+i*lineHeight,baseW));
+  } else if(item.type==="draw"){
+   if(item.points&&item.points.length){
+    ctx.scale(item.flipX?-1:1,item.flipY?-1:1);
+    ctx.strokeStyle=item.color||"#111";ctx.lineWidth=item.lineWidth||1.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
+    item.points.forEach((p,i)=>{const x=(p.x-.5)*item.w,y=(p.y-.5)*item.h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+    if(item.points.length===1){ctx.lineTo((item.points[0].x-.5)*item.w+.1,(item.points[0].y-.5)*item.h+.1)}
+    ctx.stroke();
+   }
+  }
+  ctx.restore();
+ }
+ function sheetCanvas(sheet,canvas){
+  const [w,h]=dims(sheet),rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  const px=Math.max(1,Math.round(rect.width*dpr));
+  if(canvas.width!==px||canvas.height!==Math.round(px*h/w)){canvas.width=px;canvas.height=Math.round(px*h/w)}
+  const ctx=canvas.getContext("2d");ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);
+  ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  sheet.items.forEach(item=>drawItem(ctx,item));
+  if(selected&&selected.sheetId===sheet.id){
+   const item=sheet.items.find(x=>x.id===selected.itemId);
+   if(item){
+    const cx=item.x+item.w/2,cy=item.y+item.h/2;ctx.save();ctx.translate(cx,cy);ctx.rotate((item.rotation||0)*Math.PI/180);ctx.scale(item.flipX?-1:1,item.flipY?-1:1);
+    ctx.strokeStyle="#1684d4";ctx.lineWidth=Math.max(.4,w/700);ctx.setLineDash([2,1.4]);ctx.strokeRect(-item.w/2,-item.h/2,item.w,item.h);ctx.setLineDash([]);
+    const r=handleRadius(sheet,canvas)*.8;ctx.fillStyle="#fff";ctx.strokeStyle="#1684d4";
+    [[-item.w/2,-item.h/2],[item.w/2,-item.h/2],[item.w/2,item.h/2],[-item.w/2,item.h/2]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke()});
+    ctx.beginPath();ctx.moveTo(0,-item.h/2);ctx.lineTo(0,-item.h/2-r*3);ctx.stroke();
+    ctx.beginPath();ctx.arc(0,-item.h/2-r*3,r*1.15,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.restore();
+   }
+  }
+  if(cropRect&&cropRect.sheetId===sheet.id){
+   ctx.fillStyle="#1684d433";ctx.strokeStyle="#1684d4";ctx.lineWidth=Math.max(.5,w/700);
+   ctx.fillRect(cropRect.x,cropRect.y,cropRect.w,cropRect.h);ctx.strokeRect(cropRect.x,cropRect.y,cropRect.w,cropRect.h);
+  }
+ }
+ function redraw(sheet){
+  const card=document.querySelector(`[data-sheet="${sheet.id}"]`),canvas=card&&card.querySelector("canvas");
+  if(canvas)sheetCanvas(sheet,canvas);
+ }
+ function render(){
+  const scrollX=window.scrollX,scrollY=window.scrollY;
+  sheetsEl.replaceChildren();
+  project.sheets.forEach((sheet,index)=>{
+   const card=document.createElement("section");card.className="sheet-card";card.dataset.sheet=sheet.id;
+   card.innerHTML=`<div class="sheet-head"><span class="sheet-name">Лист ${index+1}</span><label>Формат <select class="format"></select></label><label>Ориентация <select class="orientation"><option value="portrait">Книжная</option><option value="landscape">Альбомная</option></select></label><label class="custom-size">мм <input class="cw" type="number" min="10" max="2000" step="1"> × <input class="ch" type="number" min="10" max="2000" step="1"></label><button class="duplicate-sheet" title="Дублировать лист">Дублировать</button><button class="remove-sheet" title="Удалить лист">×</button></div><div class="stage"><canvas></canvas></div><div class="hint">Выберите объект для перемещения. Угловые маркеры меняют размер, круг сверху — поворачивает. На телефоне масштабирование и поворот можно делать двумя пальцами.</div><div class="props"></div>`;
+   const format=card.querySelector(".format");
+   Object.keys(formats).forEach(f=>{const op=document.createElement("option");op.value=f;op.textContent=f==="Custom"?"Свой размер":f;format.append(op)});
+   format.value=sheet.format;card.querySelector(".orientation").value=sheet.orientation;
+   card.querySelector(".cw").value=sheet.width;card.querySelector(".ch").value=sheet.height;
+   card.querySelector(".custom-size").style.display=sheet.format==="Custom"?"flex":"none";
+   format.onchange=()=>{sheet.format=format.value;sheet.width=formats[sheet.format][0];sheet.height=formats[sheet.format][1];render()};
+   card.querySelector(".orientation").onchange=e=>{sheet.orientation=e.target.value;render()};
+   const changeCustom=()=>{sheet.format="Custom";sheet.width=Math.max(10,+card.querySelector(".cw").value||210);sheet.height=Math.max(10,+card.querySelector(".ch").value||297);format.value="Custom";render()};
+   card.querySelector(".cw").onchange=changeCustom;card.querySelector(".ch").onchange=changeCustom;
+   card.querySelector(".remove-sheet").onclick=()=>{if(project.sheets.length===1){toast("В проекте должен остаться хотя бы один лист");return}project.sheets.splice(index,1);if(selected?.sheetId===sheet.id)selected=null;if(activeSheetId===sheet.id)activeSheetId=project.sheets[Math.max(0,index-1)].id;render()};
+   card.querySelector(".duplicate-sheet").onclick=()=>{const copy=JSON.parse(JSON.stringify(sheet));copy.id=newId();copy.items.forEach(x=>x.id=newId());project.sheets.splice(index+1,0,copy);activeSheetId=copy.id;render()};
+   card.querySelector("canvas").addEventListener("touchstart",e=>{if((e.touches.length>=2&&drawing?.kind==="move")||(e.touches.length===1&&touchWouldCapture(e,sheet,card.querySelector("canvas"))))e.preventDefault()},{passive:false});
+   card.querySelector("canvas").addEventListener("pointerdown",e=>pointerDown(e,sheet,card.querySelector("canvas")));
+   card.querySelector("canvas").addEventListener("pointermove",e=>pointerMove(e,sheet,card.querySelector("canvas")));
+   card.querySelector("canvas").addEventListener("pointerup",e=>pointerUp(e,sheet,card.querySelector("canvas")));
+   card.querySelector("canvas").addEventListener("pointercancel",e=>{activePointers.delete(e.pointerId);drawing=null;cropRect=null;redraw(sheet)});
+   card.querySelector(".props").replaceChildren();
+   sheetsEl.append(card);renderProps(sheet,card.querySelector(".props"));sheetCanvas(sheet,card.querySelector("canvas"));
+  });
+  requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY));
+ }
+ function renderProps(sheet,el){
+  const item=selected?.sheetId===sheet.id?sheet.items.find(x=>x.id===selected.itemId):null;
+  if(!item){el.innerHTML='<span class="muted">Выберите рисунок или надпись, чтобы задать точные размеры и параметры.</span>';return}
+  el.innerHTML=`<label>Ширина, мм <input class="pw" type="number" min="1" step="0.1" value="${fmt(item.w)}"></label><label>Высота, мм <input class="ph" type="number" min="1" step="0.1" value="${fmt(item.h)}"></label><label>Поворот, ° <input class="prot" type="number" step="1" value="${fmt(item.rotation||0)}"></label><label><input class="lockAspect" type="checkbox" ${item.lockAspect!==false?"checked":""}> Сохранять пропорции</label><label>Цвет <input class="pcolor" type="color" value="${item.color||"#222222"}"></label><span class="spacer"></span>`;
+  if(item.type==="text")el.innerHTML+=`<label>Текст <input class="ptext" type="text" value="${escapeAttr(item.text||"")}"></label><label>Размер шрифта, мм <input class="pfont" type="number" min="1" step="0.5" value="${item.fontSize||12}"></label>`;
+  el.innerHTML+=`<button class="flipX ${item.flipX?"active":""}" type="button" aria-pressed="${!!item.flipX}">Отразить ↔</button><button class="flipY ${item.flipY?"active":""}" type="button" aria-pressed="${!!item.flipY}">Отразить ↕</button>`;
+  if(item.type==="image")el.innerHTML+='<button class="invertColors" type="button" aria-pressed="'+!!item.invertColors+'">'+(item.invertColors?"Вернуть цвета":"Инвертировать цвета")+'</button><button class="cropBtn">Обрезать</button>';
+  const updateSize=changed=>{
+   const ratio=item.w/item.h,lock=el.querySelector(".lockAspect").checked;
+   let width=Math.max(1,+el.querySelector(".pw").value||item.w),height=Math.max(1,+el.querySelector(".ph").value||item.h);
+   if(changed==="width"&&lock)height=width/ratio;
+   if(changed==="height"&&lock)width=height*ratio;
+   item.w=snap(width);item.h=snap(height);
+   el.querySelector(".pw").value=fmt(item.w);el.querySelector(".ph").value=fmt(item.h);redraw(sheet);
+  };
+  el.querySelector(".pw").onchange=()=>updateSize("width");
+  el.querySelector(".ph").onchange=()=>updateSize("height");
+  el.querySelector(".prot").onchange=()=>{item.rotation=+el.querySelector(".prot").value||0;redraw(sheet)};
+  el.querySelector(".lockAspect").onchange=e=>{item.lockAspect=e.target.checked};
+  el.querySelector(".flipX").onclick=e=>{item.flipX=!item.flipX;e.currentTarget.classList.toggle("active",item.flipX);e.currentTarget.setAttribute("aria-pressed",String(item.flipX));redraw(sheet)};
+  el.querySelector(".flipY").onclick=e=>{item.flipY=!item.flipY;e.currentTarget.classList.toggle("active",item.flipY);e.currentTarget.setAttribute("aria-pressed",String(item.flipY));redraw(sheet)};
+  el.querySelector(".invertColors")?.addEventListener("click",e=>{item.invertColors=!item.invertColors;e.currentTarget.textContent=item.invertColors?"Вернуть цвета":"Инвертировать цвета";e.currentTarget.setAttribute("aria-pressed",String(item.invertColors));redraw(sheet)});
+  el.querySelector(".pcolor").oninput=e=>{item.color=e.target.value;redraw(sheet)};
+  if(item.type==="text"){
+   el.querySelector(".ptext").onchange=e=>{item.text=e.target.value;redraw(sheet)};
+   el.querySelector(".pfont").onchange=e=>{item.fontSize=Math.max(1,+e.target.value||12);redraw(sheet)};
+  }
+  el.querySelector(".cropBtn")?.addEventListener("click",()=>setTool("crop"));
+ }
+ function escapeAttr(value){return String(value).replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;")}
+ function coords(e,sheet,canvas){const [w,h]=dims(sheet),r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*w,y:(e.clientY-r.top)/r.height*h}}
+ function localPoint(item,p){const cx=item.x+item.w/2,cy=item.y+item.h/2,a=-(item.rotation||0)*Math.PI/180,dx=p.x-cx,dy=p.y-cy;let x=dx*Math.cos(a)-dy*Math.sin(a)+item.w/2,y=dx*Math.sin(a)+dy*Math.cos(a)+item.h/2;if(item.flipX)x=item.w-x;if(item.flipY)y=item.h-y;return{x,y}}
+ function hitItem(item,p){const q=localPoint(item,p);return q.x>=0&&q.y>=0&&q.x<=item.w&&q.y<=item.h}
+ const coarse=matchMedia("(pointer:coarse)");
+ function handleRadius(sheet,canvas){
+  const [w]=dims(sheet),pxPerMm=canvas.getBoundingClientRect().width/w;
+  return (coarse.matches?13:7)/pxPerMm;
+ }
+ function hitHandles(item,p,r){
+  const q=localPoint(item,p),cx=item.w/2;
+  const corners=[["resize-tl",0,0],["resize-tr",item.w,0],["resize-br",item.w,item.h],["resize-bl",0,item.h]];
+  const reach=coarse.matches?2:1.6;
+  for(const [name,x,y] of corners){if(Math.hypot(q.x-x,q.y-y)<r*reach)return name}
+  if(Math.hypot(q.x-cx,q.y+r*3)<r*reach)return "rotate";
+  return null;
+ }
+ function touchWouldCapture(e,sheet,canvas){
+  if(activeTool!=="select")return true;
+  const t=e.touches[0],r=canvas.getBoundingClientRect(),[w,h]=dims(sheet),p={x:(t.clientX-r.left)/r.width*w,y:(t.clientY-r.top)/r.height*h};
+  const sel=selected?.sheetId===sheet.id&&sheet.items.find(x=>x.id===selected.itemId);
+  if(sel&&hitHandles(sel,p,handleRadius(sheet,canvas)))return true;
+  return sheet.items.some(item=>hitItem(item,p));
+ }
+ function snap(value){return snapToGrid?Math.round(value):value}
+ function pointerDown(e,sheet,canvas){
+  e.preventDefault();activeSheetId=sheet.id;canvas.setPointerCapture(e.pointerId);const p=coords(e,sheet,canvas);
+  activePointers.set(e.pointerId,{sheetId:sheet.id,point:p});
+  if(activeTool==="select"&&drawing?.kind==="move"&&drawing.sheetId===sheet.id&&selected?.sheetId===sheet.id&&activePointers.size>=2){
+   const item=sheet.items.find(x=>x.id===selected.itemId),points=[...activePointers.values()].filter(x=>x.sheetId===sheet.id).slice(-2).map(x=>x.point);
+   if(item&&points.length===2){
+    const [a,b]=points,dx=b.x-a.x,dy=b.y-a.y;
+    drawing={kind:"gesture",sheetId:sheet.id,itemId:item.id,original:{x:item.x,y:item.y,w:item.w,h:item.h,rotation:item.rotation||0},startCenter:{x:(item.x+item.w/2),y:(item.y+item.h/2)},startMid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},startDistance:Math.max(1,Math.hypot(dx,dy)),startAngle:Math.atan2(dy,dx)};
+    return;
+   }
+  }
+  if(activeTool==="draw"){drawing={sheetId:sheet.id,points:[p]};return}
+  if(activeTool==="crop"){
+   const item=selected?.sheetId===sheet.id&&sheet.items.find(x=>x.id===selected.itemId);
+   if(!item||item.type!=="image"){toast("Сначала выберите изображение");setTool("select");return}
+   if(!hitItem(item,p)){toast("Начните выделение внутри изображения");return}
+   cropRect={sheetId:sheet.id,itemId:item.id,start:localPoint(item,p),end:localPoint(item,p)};redraw(sheet);return;
+  }
+  const sel=selected?.sheetId===sheet.id&&sheet.items.find(x=>x.id===selected.itemId);
+  if(sel){
+   const handle=hitHandles(sel,p,handleRadius(sheet,canvas));
+   if(handle){drawing={kind:handle,sheetId:sheet.id,itemId:sel.id,start:p,original:{x:sel.x,y:sel.y,w:sel.w,h:sel.h,rotation:sel.rotation||0},startAngle:Math.atan2(p.y-(sel.y+sel.h/2),p.x-(sel.x+sel.w/2))};return}
+  }
+  for(let i=sheet.items.length-1;i>=0;i--){
+   const item=sheet.items[i];
+   if(hitItem(item,p)){
+    selected={sheetId:sheet.id,itemId:item.id};drawing={kind:"move",sheetId:sheet.id,itemId:item.id,start:p,original:{x:item.x,y:item.y}};
+    renderProps(sheet,document.querySelector(`[data-sheet="${sheet.id}"] .props`));redraw(sheet);return;
+   }
+  }
+  selected=null;render();
+ }
+ function pointerMove(e,sheet,canvas){
+  const p=coords(e,sheet,canvas);
+  if(activePointers.has(e.pointerId))activePointers.set(e.pointerId,{sheetId:sheet.id,point:p});
+  if(drawing?.kind==="gesture"&&drawing.sheetId===sheet.id){
+   const points=[...activePointers.values()].filter(x=>x.sheetId===sheet.id).slice(-2).map(x=>x.point);
+   if(points.length===2){
+    const [a,b]=points,dx=b.x-a.x,dy=b.y-a.y,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    const item=sheet.items.find(x=>x.id===drawing.itemId);
+    if(item){
+     const old=drawing.original,scale=Math.max(.02,Math.hypot(dx,dy)/drawing.startDistance);
+     let angle=Math.atan2(dy,dx)-drawing.startAngle;
+     if(angle>Math.PI)angle-=Math.PI*2;if(angle<-Math.PI)angle+=Math.PI*2;
+     item.w=snap(Math.max(2,old.w*scale));item.h=snap(Math.max(2,old.h*scale));
+     const centerX=drawing.startCenter.x+(mid.x-drawing.startMid.x),centerY=drawing.startCenter.y+(mid.y-drawing.startMid.y);
+     item.x=snap(centerX-item.w/2);item.y=snap(centerY-item.h/2);item.rotation=old.rotation+angle*180/Math.PI;
+     const props=document.querySelector(`[data-sheet="${sheet.id}"] .props`);
+     if(props){props.querySelector(".pw").value=fmt(item.w);props.querySelector(".ph").value=fmt(item.h);props.querySelector(".prot").value=fmt(item.rotation)}
+     redraw(sheet);
+    }
+   }
+   return;
+  }
+  if(drawing?.sheetId===sheet.id&&drawing.points){drawing.points.push(p);drawPreview(sheet,canvas);return}
+  if(cropRect?.sheetId===sheet.id){const item=sheet.items.find(x=>x.id===cropRect.itemId);cropRect.end=localPoint(item,p);redraw(sheet);return}
+  if(!drawing||drawing.sheetId!==sheet.id)return;
+  const item=sheet.items.find(x=>x.id===drawing.itemId);if(!item)return;
+  const dx=p.x-drawing.start.x,dy=p.y-drawing.start.y,old=drawing.original;
+  if(drawing.kind==="move"){item.x=snap(old.x+dx);item.y=snap(old.y+dy)}
+  if(drawing.kind.startsWith("resize-")){
+   const q=localPoint({...item,...old},p),scaleX=Math.max(2,Math.abs(q.x-old.w/2)*2)/old.w,scaleY=Math.max(2,Math.abs(q.y-old.h/2)*2)/old.h;
+   if(item.lockAspect!==false){const scale=Math.max(scaleX,scaleY);item.w=snap(Math.max(2,old.w*scale));item.h=snap(Math.max(2,old.h*scale))}
+   else{item.w=snap(Math.max(2,old.w*scaleX));item.h=snap(Math.max(2,old.h*scaleY))}
+   item.x=old.x+old.w/2-item.w/2;item.y=old.y+old.h/2-item.h/2;
+  }
+  if(drawing.kind==="rotate"){
+   let delta=Math.atan2(p.y-(old.y+old.h/2),p.x-(old.x+old.w/2))-drawing.startAngle;
+   if(delta>Math.PI)delta-=Math.PI*2;if(delta<-Math.PI)delta+=Math.PI*2;
+   item.rotation=old.rotation+delta*180/Math.PI;
+  }
+  redraw(sheet);
+ }
+ function drawPreview(sheet,canvas){
+  sheetCanvas(sheet,canvas);if(!drawing?.points?.length)return;
+  const [w,h]=dims(sheet),ctx=canvas.getContext("2d");ctx.save();ctx.setTransform(canvas.width/w,0,0,canvas.height/h,0,0);ctx.strokeStyle=drawColor;ctx.lineWidth=1.2;ctx.lineCap="round";ctx.beginPath();drawing.points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.restore();
+ }
+ function pointerUp(e,sheet,canvas){
+  if(drawing?.kind==="gesture"&&drawing.sheetId===sheet.id){
+   activePointers.delete(e.pointerId);drawing=null;return;
+  }
+  activePointers.delete(e.pointerId);
+  if(drawing?.sheetId===sheet.id&&drawing.points){
+   const points=drawing.points;if(points.length){const xs=points.map(p=>p.x),ys=points.map(p=>p.y),minX=Math.min(...xs),minY=Math.min(...ys),ww=Math.max(1,Math.max(...xs)-minX),hh=Math.max(1,Math.max(...ys)-minY);
+    const item={id:newId(),type:"draw",x:minX,y:minY,w:ww,h:hh,rotation:0,color:drawColor,lineWidth:1.2,points:points.map(p=>({x:(p.x-minX)/ww,y:(p.y-minY)/hh}))};sheet.items.push(item);selected={sheetId:sheet.id,itemId:item.id};
+   }
+   drawing=null;render();return;
+  }
+  if(cropRect?.sheetId===sheet.id){applyCrop(sheet);return}
+  if(drawing?.sheetId===sheet.id){drawing=null;render()}
+ }
+ function applyCrop(sheet){
+  const rect=cropRect,item=sheet.items.find(x=>x.id===rect.itemId);cropRect=null;
+  if(!item||item.type!=="image")return;
+  const x=Math.max(0,Math.min(rect.start.x,rect.end.x)),y=Math.max(0,Math.min(rect.start.y,rect.end.y));
+  const w=Math.min(item.w-x,Math.abs(rect.end.x-rect.start.x)),h=Math.min(item.h-y,Math.abs(rect.end.y-rect.start.y));
+  if(w<2||h<2){toast("Область обрезки слишком мала");setTool("select");redraw(sheet);return}
+  const im=imageFor(item.src);if(!im.complete){im.onload=()=>applyCropRect(sheet,item,x,y,w,h);toast("Изображение загружается");return}
+  applyCropRect(sheet,item,x,y,w,h);
+ }
+ function applyCropRect(sheet,item,x,y,w,h){
+  const im=imageFor(item.src),c=item.crop||{x:0,y:0,w:1,h:1};
+  const sx=(c.x+x/item.w*c.w)*im.naturalWidth,sy=(c.y+y/item.h*c.h)*im.naturalHeight;
+  const sw=w/item.w*c.w*im.naturalWidth,sh=h/item.h*c.h*im.naturalHeight;
+  const out=document.createElement("canvas");out.width=Math.max(1,Math.round(sw));out.height=Math.max(1,Math.round(sh));
+  out.getContext("2d").drawImage(im,sx,sy,sw,sh,0,0,out.width,out.height);
+  item.src=out.toDataURL("image/png");delete item.crop;
+  const a=item.rotation*Math.PI/180,dx=x+w/2-item.w/2,dy=y+h/2-item.h/2;
+  item.x+=dx*Math.cos(a)-dy*Math.sin(a);item.y+=dx*Math.sin(a)+dy*Math.cos(a);item.w=w;item.h=h;
+  cache.delete(item.src);setTool("select");render();
+ }
+ function setTool(tool){
+  activeTool=tool;cropRect=null;
+  $("#drawTool").classList.toggle("active",tool==="draw");$("#cropTool").classList.toggle("active",tool==="crop");
+  document.querySelectorAll("canvas").forEach(c=>c.style.cursor=tool==="draw"?"crosshair":tool==="crop"?"crosshair":"default");
+ }
+ function addImages(files){
+  const sheet=project.sheets.find(x=>x.id===activeSheetId)||project.sheets[0];
+  [...files].forEach(file=>{
+   if(!file.type.startsWith("image/")){toast(`Не изображение: ${file.name}`);return}
+   const reader=new FileReader();reader.onerror=()=>toast(`Не удалось прочитать ${file.name}`);
+   reader.onload=()=>{   const src=reader.result,im=imageFor(src);im.onload=()=>{const [sw,sh]=dims(sheet),w=Math.min(65,sw*.35),h=w*im.naturalHeight/im.naturalWidth,item={id:crypto.randomUUID(),type:"image",src,x:(sw-w)/2,y:(sh-h)/2,w,h,rotation:0,lockAspect:true};sheet.items.push(item);selected={sheetId:sheet.id,itemId:item.id};render()};im.onerror=()=>toast(`Не удалось открыть ${file.name}`)};
+   reader.readAsDataURL(file);
+  });
+ }
+ $("#addSheet").onclick=()=>{const sheet=makeSheet();project.sheets.push(sheet);activeSheetId=sheet.id;render();requestAnimationFrame(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"}))};
+ $("#addImage").onclick=()=>$("#fileInput").click();
+ $("#fileInput").onchange=e=>{addImages(e.target.files);e.target.value=""};
+ $("#addText").onclick=()=>{
+  const text=prompt("Введите надпись:","Текст");if(text===null)return;
+  const sheet=project.sheets.find(x=>x.id===activeSheetId)||project.sheets[0],[w,h]=dims(sheet),item={id:newId(),type:"text",text:text||"Текст",x:w*.25,y:h*.25,w:Math.min(80,w*.5),h:20,baseW:Math.min(80,w*.5),baseH:20,fontSize:12,color:"#222",rotation:0,lockAspect:true};
+  sheet.items.push(item);selected={sheetId:sheet.id,itemId:item.id};render();
+ };
+ function hslToRgb(h,s,l){
+  const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x}else if(h<120){r=x;g=c}else if(h<180){g=c;b=x}else if(h<240){g=x;b=c}else if(h<300){r=x;b=c}else{r=c;b=x}
+  return [r,g,b].map(v=>Math.round((v+m)*255));
+ }
+ function rgbHex(rgb){return "#"+rgb.map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase()}
+ function updateDrawColor(){
+  drawColor=rgbHex(hslToRgb(colorHue,colorSaturation,colorLightness));
+  $("#drawColorSwatch").style.backgroundColor=drawColor;$("#colorPreviewSwatch").style.backgroundColor=drawColor;$("#colorHex").textContent=drawColor;
+  paintColorWheel();
+ }
+ function paintColorWheel(){
+  const canvas=$("#colorWheel"),ctx=canvas.getContext("2d"),size=canvas.width,center=size/2,radius=center-2,image=ctx.createImageData(size,size);
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+   const dx=x-center,dy=y-center,r=Math.hypot(dx,dy);if(r>radius)continue;
+   const hue=(Math.atan2(dy,dx)*180/Math.PI+360)%360,saturation=Math.min(1,r/radius),rgb=hslToRgb(hue,saturation,colorLightness),i=(y*size+x)*4;
+   image.data[i]=rgb[0];image.data[i+1]=rgb[1];image.data[i+2]=rgb[2];image.data[i+3]=255;
+  }
+  ctx.putImageData(image,0,0);
+  const angle=colorHue*Math.PI/180,markerRadius=colorSaturation*radius,mx=center+Math.cos(angle)*markerRadius,my=center+Math.sin(angle)*markerRadius;
+  ctx.beginPath();ctx.arc(mx,my,5,0,Math.PI*2);ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.stroke();ctx.strokeStyle="#111";ctx.lineWidth=1;ctx.stroke();
+ }
+ function selectWheelColor(e){
+  const canvas=$("#colorWheel"),rect=canvas.getBoundingClientRect(),scale=canvas.width/rect.width,x=(e.clientX-rect.left)*scale-canvas.width/2,y=(e.clientY-rect.top)*scale-canvas.height/2,radius=canvas.width/2-2,distance=Math.min(radius,Math.hypot(x,y));
+  colorHue=(Math.atan2(y,x)*180/Math.PI+360)%360;colorSaturation=distance/radius;updateDrawColor();
+ }
+ $("#drawTool").onclick=()=>setTool(activeTool==="draw"?"select":"draw");
+ $("#gridSnap").onchange=e=>{snapToGrid=e.target.checked;toast(snapToGrid?"Привязка к сетке 1 мм включена":"Привязка к сетке отключена")};
+ $("#drawColorToggle").onclick=()=>{$("#colorPicker").hidden=!$("#colorPicker").hidden;if(!$("#colorPicker").hidden)paintColorWheel()};
+ $("#colorWheel").addEventListener("pointerdown",e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);selectWheelColor(e)});
+ $("#colorWheel").addEventListener("pointermove",e=>{if(e.buttons||e.pressure>0)selectWheelColor(e)});
+ $("#colorBrightness").oninput=e=>{colorLightness=Number(e.target.value)/100;updateDrawColor()};
+ updateDrawColor();
+ $("#cropTool").onclick=()=>setTool(activeTool==="crop"?"select":"crop");
+ $("#deleteItem").onclick=()=>{if(!selected)return;const s=project.sheets.find(x=>x.id===selected.sheetId);s.items=s.items.filter(x=>x.id!==selected.itemId);selected=null;render()};
+ $("#matrix").onclick=()=>{
+  if(!selected){toast("Сначала выберите изображение");return}
+  const sheet=project.sheets.find(x=>x.id===selected.sheetId),item=sheet.items.find(x=>x.id===selected.itemId);
+  if(!item||item.type!=="image"){toast("Матрица доступна для изображений");return}
+  const cols=Number(prompt("Количество столбцов:", "3")),rows=Number(prompt("Количество строк:", "3"));
+  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<1||rows<1||cols*rows>500){toast("Укажите целые значения от 1 до 500 копий");return}
+  const gap=Math.max(0,Number(prompt("Зазор между копиями, мм:", "2"))||0),[sw,sh]=dims(sheet),totalW=cols*item.w+(cols-1)*gap,totalH=rows*item.h+(rows-1)*gap;
+  if(totalW>sw||totalH>sh){toast("Матрица не помещается на лист");return}
+  const startX=(sw-totalW)/2,startY=(sh-totalH)/2,base=JSON.parse(JSON.stringify(item));
+  sheet.items=sheet.items.filter(x=>x.id!==item.id);
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){const copy=JSON.parse(JSON.stringify(base));copy.id=newId();copy.x=startX+col*(item.w+gap);copy.y=startY+row*(item.h+gap);sheet.items.push(copy)}
+  selected=null;render();toast(`Добавлено ${cols*rows} копий`);
+ };
+ $("#saveProject").onclick=()=>{
+  const blob=new Blob([JSON.stringify(project)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="лист-проект.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ };
+ $("#loadProject").onclick=()=>$("#projectInput").click();
+ $("#projectInput").onchange=e=>{
+  const file=e.target.files[0];if(!file)return;const reader=new FileReader();
+  reader.onerror=()=>toast("Не удалось прочитать проект");
+  reader.onload=()=>{try{const value=JSON.parse(reader.result);if(value.version!==1||!Array.isArray(value.sheets)||!value.sheets.length)throw new Error("Неподдерживаемый формат проекта");project=value;selected=null;activeSheetId=project.sheets[0].id;cache.clear();render();toast("Проект открыт")}catch(err){toast(err.message||"Некорректный файл проекта")}};
+  reader.readAsText(file);e.target.value="";
+ };
+ $("#print").onclick=()=>{
+  document.querySelectorAll(".sheet-card").forEach((card,i)=>{const sheet=project.sheets[i],[w,h]=dims(sheet);card.style.setProperty("--print-width",`${w}mm`);card.style.setProperty("--print-height",`${h}mm`)});
+  window.print();
+ };
+ $("#moreToolsToggle").onclick=()=>{
+  const expanded=document.querySelector("header").classList.toggle("tools-expanded");
+  $("#moreToolsToggle").setAttribute("aria-expanded",String(expanded));
+  $("#moreToolsToggle").setAttribute("aria-label",expanded?"Скрыть остальные команды":"Показать остальные команды");
+ };
+ let printSelection=null;
+ window.addEventListener("beforeprint",()=>{printSelection=selected;selected=null;project.sheets.forEach(redraw)});
+ window.addEventListener("afterprint",()=>{selected=printSelection;printSelection=null;render()});
+ window.addEventListener("resize",()=>project.sheets.forEach(redraw));
+ window.addEventListener("keydown",e=>{if(e.key==="Delete"&&selected)$("#deleteItem").click();if(e.key==="Escape")setTool("select")});
+ render();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(err => {
+      console.warn("Не удалось зарегистрировать service worker:", err);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
